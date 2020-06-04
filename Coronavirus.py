@@ -46,11 +46,12 @@ def GoogMobaggregate(mapping,df,country,countrycode):
     dfaverages['sub_region_2']=np.nan
     return dfaverages
 
+
 ### OpenCovid ###
-dfdata = pd.read_csv('New\data.csv')
-dfmobility = pd.read_csv('New\mobility.csv')
-dfweather = pd.read_csv('New\weather.csv')
-dfresponse = pd.read_csv('New\Response.csv')
+dfdata = pd.read_csv('Deaths\OpenCovid Data.csv')
+#dfmobility = pd.read_csv('New\mobility.csv')
+#dfweather = pd.read_csv('New\weather.csv')
+#dfresponse = pd.read_csv('New\Response.csv')
 
 
 ### Import Mappings ###
@@ -246,7 +247,7 @@ dfHouseholds_final.columns = ['Year_Households','regionNUTS','Households']
 #Add swedish data (not in Eurostats dataset):
 #Source: http://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__BE__BE0101__BE0101S/HushallT05/table/tableViewLayout1/
 dfHouseholds_Sweden = pd.read_excel('Eurostat Data/Eurostat Households/Households_Sweden.xlsx')
-dfHouseholds_Sweden.Households = dfHouseholds_Sweden.Households*1000
+dfHouseholds_Sweden.Households = dfHouseholds_Sweden.Households/1000
 #Put everything toghether
 dfHouseholds_final = pd.concat([dfHouseholds_Sweden, UKaggregate(mapUKNutsNHS,dfHouseholds_final,'sum','Households',2019),dfHouseholds_final]).drop_duplicates(subset=['regionNUTS'], keep='first')
 
@@ -329,8 +330,15 @@ model = ols("chgdeathsper1m_shifted3dma ~ CriticalCareBeds + GDPpercapita + pers
 results = model.fit()
 results.summary()
 
-col_options = [dict(label=x, value=x) for x in dfDeathdata.columns]
+#For Dash App:
+#   only get data that is needed
+dfDeathdatafinal = dfDeathdata[['chgdeathsper1m_shifted3dma','CriticalCareBeds', 'GDPpercapita', 'personsperhousehold', 'PopulationDensity', 'retail_and_recreation_percent_change_from_baseline3dma','transit_stations_percent_change_from_baseline3dma','parks_percent_change_from_baseline3dma','grocery_and_pharmacy_percent_change_from_baseline3dma','Country']].dropna()
+dfDeathdatafinal = dfDeathdatafinal[dfDeathdatafinal['chgdeathsper1m_shifted3dma']>0]
+
+col_options = [dict(label=x, value=x) for x in dfDeathdatafinal.columns]
 dimensions = ["x", "y", "color", "facet_col", "facet_row"]
+
+
 
 app = dash.Dash(
     __name__, external_stylesheets=["https://codepen.io/chriddyp/pen/bWLwgP.css"]
@@ -354,7 +362,7 @@ app.layout = html.Div(
 @app.callback(Output("graph", "figure"), [Input(d, "value") for d in dimensions])
 def make_figure(x, y, color, facet_col, facet_row):
     return px.scatter(
-        dfDeathdata,
+        dfDeathdatafinal.dropna(),
         x=x,
         y=y,
         color=color,
