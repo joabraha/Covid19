@@ -8,6 +8,11 @@ import pandas as pd
 import numpy as np
 from linearmodels import PanelOLS
 #import pandas_datareader.data as web
+import plotly.express as px
+import dash
+import dash_html_components as html
+import dash_core_components as dcc
+from dash.dependencies import Input, Output
 
 ### UK specific function ###
 def UKaggregate(mapping,df,sumavg,datapoint,date):
@@ -314,12 +319,49 @@ dfDeathdata['intDeathsandworkplaces_percent_change_from_baseline3dma'] = dfDeath
 
 
 ### Fixed Effects regression ###
-mod = PanelOLS.from_formula('chgdeathsper1m_shifted3dma ~ CriticalCareBeds + GDPpercapita + personsperhousehold + PopulationDensity + grocery_and_pharmacy_percent_change_from_baseline3dma + transit_stations_percent_change_from_baseline3dma + workplaces_percent_change_from_baseline3dma + intDeathsandtransit_stations_percent_change_from_baseline3dma', data=dfDeathdata[dfDeathdata['chgdeathsper1m_shifted3dma'].between(1,60)])
+mod = PanelOLS.from_formula('chgdeathsper1m_shifted3dma ~ CriticalCareBeds + GDPpercapita + personsperhousehold + PopulationDensity + retail_and_recreation_percent_change_from_baseline3dma + transit_stations_percent_change_from_baseline3dma + workplaces_percent_change_from_baseline3dma', data=dfDeathdata[dfDeathdata['chgdeathsper1m_shifted3dma'].between(1,100)])
 res = mod.fit(cov_type='clustered', cluster_entity=True)
 res
 
 
 ### OLS Regression ###
-model = ols("chgdeathsper1m_shifted3dma ~ CriticalCareBeds + GDPpercapita + personsperhousehold + PopulationDensity + retail_and_recreation_percent_change_from_baseline +transit_stations_percent_change_from_baseline", data=dfDeathdata[dfDeathdata['chgdeathsper1m_shifted3dma'].between(1,60)], missing='drop')
+model = ols("chgdeathsper1m_shifted3dma ~ CriticalCareBeds + GDPpercapita + personsperhousehold + PopulationDensity + retail_and_recreation_percent_change_from_baseline3dma +transit_stations_percent_change_from_baseline3dma", data=dfDeathdata[dfDeathdata['chgdeathsper1m_shifted3dma'].between(1,60)], missing='drop')
 results = model.fit()
 results.summary()
+
+col_options = [dict(label=x, value=x) for x in dfDeathdata.columns]
+dimensions = ["x", "y", "color", "facet_col", "facet_row"]
+
+app = dash.Dash(
+    __name__, external_stylesheets=["https://codepen.io/chriddyp/pen/bWLwgP.css"]
+)
+
+app.layout = html.Div(
+    [
+        html.H1("Demo: Plotly Express in Dash with Tips Dataset"),
+        html.Div(
+            [
+                html.P([d + ":", dcc.Dropdown(id=d, options=col_options)])
+                for d in dimensions
+            ],
+            style={"width": "25%", "float": "left"},
+        ),
+        dcc.Graph(id="graph", style={"width": "75%", "display": "inline-block"}),
+    ]
+)
+
+
+@app.callback(Output("graph", "figure"), [Input(d, "value") for d in dimensions])
+def make_figure(x, y, color, facet_col, facet_row):
+    return px.scatter(
+        dfDeathdata,
+        x=x,
+        y=y,
+        color=color,
+        facet_col=facet_col,
+        facet_row=facet_row,
+        height=700,
+    )
+
+if __name__ == '__main__':
+    app.run_server(debug=False)
