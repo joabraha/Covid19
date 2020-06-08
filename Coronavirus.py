@@ -8,8 +8,6 @@ import pandas as pd
 import numpy as np
 from linearmodels import PanelOLS
 
-#test
-
 # import pandas_datareader.data as web
 import plotly.express as px
 import dash
@@ -524,6 +522,7 @@ results.summary()
 #   only get data that is needed
 dfDeathdatafinal = dfDeathdata[
     [
+        "deathsper1m",
         "chgdeathsper1m_shifted3dma",
         "CriticalCareBeds",
         "GDPpercapita",
@@ -536,11 +535,22 @@ dfDeathdatafinal = dfDeathdata[
         "Country",
     ]
 ].dropna()
+#Delete Data with errors (change in deaths can only be positive)
 dfDeathdatafinal = dfDeathdatafinal[dfDeathdatafinal["chgdeathsper1m_shifted3dma"] > 0]
+
+dfDeathdatafinal.reset_index(inplace=True)
+
+#Get average movement changes
+dfDeathdatafinal['retail_and_recreation_avg_change'] = dfDeathdatafinal.groupby(dfDeathdatafinal['region'])['retail_and_recreation_percent_change_from_baseline3dma'].transform('mean') 
+
+#Only keep last entry
+dfDeathdatafinal = dfDeathdatafinal.sort_values(
+    by='date', ascending=False
+).drop_duplicates(subset=['region'])
+
 
 col_options = [dict(label=x, value=x) for x in dfDeathdatafinal.columns]
 dimensions = ["x", "y", "color", "facet_col", "facet_row"]
-
 
 app = dash.Dash(
     __name__, external_stylesheets=["https://codepen.io/chriddyp/pen/bWLwgP.css"]
