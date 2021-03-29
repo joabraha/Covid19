@@ -35,7 +35,7 @@ pickleshare==0.7.5
 plotly==4.8.1
 prompt-toolkit==3.0.5
 property-cached==1.6.4
-Pygments==2.6.1
+Pygments==2.7.4
 pylint==2.5.2
 python-dateutil==2.8.1
 pytz==2020.1
